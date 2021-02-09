@@ -1,10 +1,11 @@
 extends map.pug
 
+block schedule-content 
+
     //- Documentation to help edit/configure files:
     //- https://pugjs.org/api/getting-started.html
     //- https://getbootstrap.com/docs/5.0/getting-started/introduction/
 
-block schedule-content 
     //- Mixin to create timetable. Input is schedule (either weekday or weekend schedule). 
     mixin table(sched)
         if sched.serviceId == 4 
