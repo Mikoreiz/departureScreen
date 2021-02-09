@@ -1,0 +1,154 @@
+doctype html
+
+    //- Documentation to help edit/configure files:
+    //- https://leafletjs.com/reference-1.7.1.html
+    //- https://pugjs.org/api/getting-started.html
+    //- https://getbootstrap.com/docs/5.0/getting-started/introduction/
+
+html
+    head
+        //- UI uses Bootstrap 4
+        link(rel='stylesheet', href='https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css', integrity='sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T', crossorigin='anonymous')
+        link(rel='stylesheet', href='https://unpkg.com/leaflet@1.6.0/dist/leaflet.css', integrity='sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==', crossorigin='')
+
+        //- Title of page
+        title RTD Route #{routeId}
+
+        //- Changes scrollbar design (only works in browsers that use webkit - Chrome, Safari, etc.)
+        style.
+            ::-webkit-scrollbar {
+                width: 3.5em;
+                height: 3.5em
+            }
+            ::-webkit-scrollbar-track-piece {
+                background: #F0F0F0
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #4F4F4F;
+                border: 0.1em solid #4F4F4F;
+                border-radius: 1em
+            }​
+
+    //- Map and Schedule content
+    body(onload='setInterval(goBack, 480000)' style='overflow-x: hidden')
+        div(style='width: auto; height: 100%; margin-left: auto; margin-right: auto; overflow-x: hidden; overflow-y: auto;')
+            //- MAP
+            //- Arrays for components to be used in interactive map
+            - var line = [] // For the path line
+            - var cirParts = [] // For the stop points (we will display as circles on the map)
+            - var stopName = [] // Array for the stop names
+            - var stopId = [] // Array for the stop IDs
+
+            //- Loops through the longitude and latitude values for the route and adds them to the arrays
+            for route in map.routes
+                - var curr = 0
+                //- This loop adds the points (long, lat) that make up the path line in the map
+                for shape in route.shapes
+                    if shape.directionId == direct && shape.locs.length > curr
+                        - line = []
+                        - curr = shape.locs.length
+                        for loc in shape.locs
+                            - var arr = [] // Using a temp array to store the longitude and latitude
+                            - arr.push(loc.lat)
+                            - arr.push(loc.lon)
+                            - line.push(arr) // Pushing [latitude, longitude] into array. This will be displayed on the map as a point
+                            - // All the points will form a path line
+                //- This loop adds the stop points, the stop names, and the stop IDs
+                for direction in route.directions
+                    if direction.id == direct
+                        for stop in direction.stops
+                            - var arr = [] // Using a temp array to store the longitude and latitude
+                            - arr.push(stop.lat)
+                            - arr.push(stop.lon)
+                            - cirParts.push(arr) // Pushing [latitude, longitude] into array. This will be displayed on the map as the stop point
+                            - stopName.push(stop.name)
+                            - stopId.push(stop.id)
+            
+            //- Gets the center point of the path of the route
+            - var index = Math.round(cirParts.length/2) 
+            - var center = cirParts[index]
+
+            //- Leaflet map
+            #map(style='height: 66em; width: 100%')
+            script(src='https://unpkg.com/leaflet@1.6.0/dist/leaflet.js', integrity='sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==',
+            crossorigin='')
+            
+            //- Sets up the map display options
+            script.
+                var map = L.map("map").setView(!{JSON.stringify(center)}, 12.5);
+                var token = !{JSON.stringify(mapBox)};
+                L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+                    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                    maxZoom: 19,
+                    maxNativeZoom: 17,
+                    scrollWheelZoom: false, // Prevents the map from moving when scrolling (only allows two finger scroll or mouse click)
+                    id: 'mapbox/streets-v11',
+                    tileSize: 512,
+                    zoomOffset: -1,
+                    accessToken: token 
+                }).addTo(map);
+                map.scrollWheelZoom.disable(); // Prevents the map from moving when scrolling (only allows two finger scroll or mouse click)
+            
+            //- Path line for map
+            script.
+                var latlngs = !{JSON.stringify(line)} 
+                var polyline = L.polyline(latlngs, {
+                    color: 'black',
+                    weight: 2.5,
+                }).addTo(map);
+                map.fitBounds(polyline.getBounds()) // Fits the map to show the whole path without cutting any parts off
+            
+            //- Display options for the stops
+            script.
+                var circ = !{JSON.stringify(cirParts)};
+                var names = !{JSON.stringify(stopName)};
+                var ids = !{JSON.stringify(stopId)};
+
+                // Hashset for DTC stops
+                var dtc = new Set()
+                dtc.add('7258')
+                dtc.add('7025')
+                dtc.add('7006')
+                dtc.add('7003')
+                dtc.add('7017')
+                dtc.add('7155')
+                
+                // Makes the first stop (source) yellow color with a different radius
+                L.circleMarker(circ[0], { 
+                    color: 'white',
+                    fillColor: '#F4B400',
+                    fillOpacity: 1,
+                    radius: 11
+                }).addTo(map).bindPopup('<h5>'+names[0]+'</h5><h6>Stop ID: '+ids[0]+'</h6><h6>Stop: '+1+' (Source)</h6>')
+
+                // For the middle stops that aren't source or destination
+                for (var i = 1; i<circ.length; i++) { 
+                    L.circleMarker(circ[i], {
+                        color: 'white',
+                        fillColor: '#97002e',
+                        fillOpacity: 1,
+                        radius: 7,
+                    }).addTo(map).bindPopup('<h5>'+names[i]+'</h5><h6>Stop ID: '+ids[i]+'</h6>Stop: ' +(i+1)); 
+                };
+
+                // Last stop (destination) design options
+                L.circleMarker(circ[names.length-1], {
+                    color: 'white',
+                    fillColor: '#4285F4',
+                    fillOpacity: 1,
+                    radius: 11
+                }).addTo(map).bindPopup('<h5>'+names[names.length-1]+'</h5><h6>Stop ID: '+ids[ids.length-1]+'</h6><h6>Stop: '+names.length+' (Destination)</h6>')
+            //- END OF MAP
+
+            //- SCHEDULE CONTENT CAN BE FOUND IN onSide.pug and onTop.pug
+            block schedule-content
+
+    //- Hovering button that takes you back to route list
+    .row.fixed-bottom(style='')
+        button#slideTopBody.btn.btn-dark.mr-1.ml-4.mb-2(type='button' onClick='goBack()') Go Back
+        
+        //- JS for go back button
+        script.
+            function goBack() {
+                window.location.href = '/'; 
+            }

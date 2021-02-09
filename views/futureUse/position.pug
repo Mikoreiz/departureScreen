@@ -1,0 +1,87 @@
+extends layout.pug
+block head-content
+    link(rel='stylesheet', href='https://unpkg.com/leaflet@1.5.1/dist/leaflet.css', integrity='sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==', crossorigin='')
+block nav-content
+    li.nav-item
+        a.nav-link.h3.font-weight-bolder(href='/info/' style='color: #434343') Back to Routes
+block unique-content
+    - var routeArr = []
+    for entity in position.entity
+        if entity.vehicle.trip && entity.vehicle.trip.routeId
+            - routeArr.push(entity.vehicle.trip.routeId)
+    - routeArr = [...new Set(routeArr)]
+    - var line = []
+    for route in rteDetails.routes
+        - routeColor = '#' + route.color
+        for shape in route.shapes
+            if shape.minor == null
+                for loc in shape.locs
+                    - var arr = []
+                    - arr.push(loc.lat)
+                    - arr.push(loc.lon)
+                    - line.push(arr)
+    - var busPosition = []
+    - var status = []
+    - var stopId = []
+    for entity in position.entity
+        - var posRteId = ''
+        if entity.vehicle.trip && entity.vehicle.trip.routeId
+            - posRteId = entity.vehicle.trip.routeId
+        if posRteId == routeIdParam && entity.vehicle.position
+            - var latLon = []
+            - latLon.push(entity.vehicle.position.latitude)
+            - latLon.push(entity.vehicle.position.longitude)
+            - busPosition.push(latLon)
+        if posRteId == routeIdParam && (entity.vehicle.currentStatus)
+            - status.push(entity.vehicle.currentStatus)
+            - stopId.push(entity.vehicle.stopId)
+    - var center = busPosition[0]
+    .row.justify-content-center
+        h1.font-weight-bolder TRACK YOUR BUS
+    .row.justify-content-center
+        .col
+            #map.mb-2(style='height: 60em; width: 100em')
+        .col(style='background-color: #800000; color: white; height: 45em')
+            .row.mb-4
+                .col
+                    h5.font-weight-bolder.mt-3(style='') Choose Route:
+                    select.mt-2.custom-select(onchange="location = this.value;" style='width: 6em')
+                        option.font-weight-bold(selected='') #{routeIdParam}
+                            for route in routeArr
+                                option.font-weight-bold #{route}
+            - var index = 0
+            for stat in status
+                if stat == "IN_TRANSIT_TO"
+                    h6.font-weight-light #{"In Transit To:"} #{stopId[index]}
+                    - index = index+1
+                else
+                    h6.font-weight-light #{"Stopped At:"} #{stopId[index]}
+                    - index = index+1
+    script(src='https://unpkg.com/leaflet@1.5.1/dist/leaflet.js')
+    script.
+        var map = L.map("map").setView(!{JSON.stringify(center)}, 13.5);
+        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        maxZoom: 19,
+        maxNativeZoom: 17,
+        scrollWheelZoom: false,
+        id: 'mapbox.streets',
+        accessToken: 'pk.eyJ1IjoibWlraGFlbHJ0ZCIsImEiOiJjanMzdHdpdHAwM2Q3NDRvMW5ueWlpaXh6In0.5QRX579-FSS4GO9VRrNx1A'
+        }).addTo(map);
+        map.scrollWheelZoom.disable();
+    script.
+        var latlngs = !{JSON.stringify(line)}
+        var polyline = L.polyline(latlngs, {
+            color: 'black',
+            weight: 1.7
+        }).addTo(map);
+        map.fitBounds(polyline.getBounds())
+    script.
+        var circ = !{JSON.stringify(busPosition)};
+        for (var i = 0; i<circ.length; i++) {
+            L.circleMarker(circ[i], {
+                color: 'white',
+                fillColor: !{JSON.stringify(routeColor)},
+                fillOpacity: .8,
+                radius: 12
+            }).addTo(map); 
+        };           

@@ -1,0 +1,101 @@
+doctype html
+html
+    
+    //- Documentation to help edit/configure files:
+    //- https://pugjs.org/api/getting-started.html
+    //- https://getbootstrap.com/docs/5.0/getting-started/introduction/
+
+    head
+        //- UI uses Bootstrap 4
+        link(rel='stylesheet', href='https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css', integrity='sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T', crossorigin='anonymous')
+        
+        //- Title of page
+        title San Joaquin RTD Routes
+
+        //- Changes scrollbar design (only works in browsers that use webkit - Chrome, Safari, etc.)
+        style.
+            ::-webkit-scrollbar {
+                width: 3.5em;
+                height: 3.5em
+            }
+            ::-webkit-scrollbar-track-piece {
+                background: #F0F0F0
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #4F4F4F;
+                border: 0.1em solid #4F4F4F;
+                border-radius: 1em
+            }​
+    
+    body(style='overflow-x:hidden')
+        //- Arrays for each route category
+        - var metro = []
+        - var hopper = []
+        - var weekend = []
+        - var county = []
+        - var commute = []
+
+        //- Loop through whole Route json and check each route for its specific category
+        each route in routes.routes
+            //- Stockton Metropolitan Area
+            if (route.id > 170 && route.id < 700) || route.id == 23 || (route.id > 39 && route.id < 90)
+                - metro.push(route)
+            //- Metro Hoppers
+            else if (route.id < 10)
+                - hopper.push(route)
+            //- Weekend Only
+            else if (route.id > 700)
+                - weekend.push(route)
+            //- County Hoppers
+            else if (route.id > 89 && route.id < 100)
+                - county.push(route)
+            //- Commuters
+            else if (route.id >= 150 && route.id < 170) || route.shortName == "Direct Connection"
+                - commute.push(route)
+        
+        //- Route list
+        .row.justify-content-center.mt-4
+            h1.display-4.font-weight-bolder San Joaquin RTD 
+        .row.justify-content-center.mb-5
+            h3.display-6.font-weight-bolder DTC (Downtown Transit Center) 
+        
+        //- Mixin used to generate cards to use for the routes. Outputs cards from the input array to be included in the list.
+        mixin routeCard(array)
+            //- Loop through each array and display the route in its specific category
+            each route in array
+                if route.shortName == "Direct Connection"
+                    - var rte = "ACE%20VAS/0"
+                else 
+                    - var rte = route.id + "/0"
+                - var color = "#" + route.color
+                //- Card layout
+                a.card.m-2.d-flex.row.justify-content-center(href=''+rte+'' style='width: 31rem; height: 6rem; text-decoration: none !important; font-size:12px; background-color: #fdfeff; color:#525151; box-shadow: 10px 10px 20px -5px rgba(0,0,0,0.15);')
+                    .card-body.ml-2.row.justify-content-start
+                        h3.card-title.display-5.p-2(style='text-align: center; color:'+color+'') #{route.id}
+                        h6.ml-2.mt-3.font-weight-bolder(style='text-align:left; font-size: 1.3em;') #{route.longName}
+
+        //- Uses routeCard mixin to generate a card by inputting specific array     
+        .row.justify-content-center.mt-4.mb-3 
+            h2 Stockton Metropolitan Area
+        .row.justify-content-center.mb-5
+            +routeCard(metro)
+        
+        .row.justify-content-center.mt-4.mb-3
+            h2 Metro Hoppers
+        .row.justify-content-center.mb-5 
+            +routeCard(hopper)
+        
+        .row.justify-content-center.mt-4.mb-3
+            h2 Weekend Only   
+        .row.justify-content-center.mb-5 
+            +routeCard(weekend)                        
+        
+        .row.justify-content-center.mt-4.mb-3
+            h2 County Hoppers
+        .row.justify-content-center.mb-5 
+            +routeCard(county)
+        
+        .row.justify-content-center.mt-4.mb-3
+            h2 Commuters
+        .row.justify-content-center.mb-5 
+            +routeCard(commute)

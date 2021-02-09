@@ -1,0 +1,91 @@
+extends map.pug
+
+    //- Documentation to help edit/configure files:
+    //- https://pugjs.org/api/getting-started.html
+    //- https://getbootstrap.com/docs/5.0/getting-started/introduction/
+
+block schedule-content 
+    //- Mixin to create timetable
+    mixin table(sched)
+        if sched.serviceId == 4 
+            - serviceName = 'Monday - Friday'
+        else 
+            - serviceName = 'Saturday - Sunday'
+
+        .container(style='width: 112em; border: none !important; margin-top: 2em;') 
+            h4.font-weight-bolder(style='color:'+routeColor+'') #{serviceName}
+            .row.responsive(style='justify-content: start; text-align: left; overflow-y: none; overflow-x: none; border: none !important')
+                //- Timetable headings (stop names)
+                .col(style='padding: 0 !important; margin: 0 !important')
+                    table.table.table-sm(style='')
+                        tbody(style='')
+                            for stops in sched.timesForStop
+                                tr
+                                    //- If stop is one of the stops at DTC, mark as red to indicate passenger's current location
+                                    if stops.stopId == '7258' || stops.stopId == '7025' || stops.stopId == '7006' || stops.stopId == '7003' || stops.stopId == '7017' || stops.stopId == '7155'
+                                        th.font-weight-bold(style='position: sticky; top: 0; font-size: .8em; width: 28em; color:red; background-color:#f7f7f7; text-align: center') #{i} #{stops.stopName}
+                                    //- Else, mark it regularly
+                                    else    
+                                        th.font-weight-bold(style='position: sticky; top: 0; font-size: .8em; width: 28em; color:black; background-color:#f7f7f7; text-align: center') #{i} #{stops.stopName}
+                //- Table body (times)
+                .col(style='padding: 0 !important; margin: 0 !important')
+                    table#container.table.table-bordered.table-responsive.table-sm(style='width: 53em')
+                        tbody(style='')
+                            for stops in sched.timesForStop
+                                tr
+                                    for time in stops.times
+                                        //- If bus isn't stopping at this certain time, display '--'
+                                        if time.timeStr == null
+                                            td.font-weight-light(style='font-size: .8em; width: 3em; text-align: center') --
+                                        //- Use moment.js to format the time display
+                                        else
+                                            - var deptime = moment(time.timeStr, 'h:mm')
+                                            - var format = moment(deptime).format('h:mma')
+                                            //- PM times will be bolded
+                                            if moment(deptime).get('hour') > 11
+                                                td.font-weight-bold(style='font-size: .8em; width: 3em; text-align: center') #{format} 
+                                            else
+                                                td.font-weight-normal(style='font-size: .8em; width: 3em; text-align: center') #{format} 
+    //- END OF MIXIN
+
+    //- TIMETABLES for the route
+    div(style='margin-top: 0.1em')
+        .row.justify-content-center 
+            h1(style='font-weight: bold; text-transform: uppercase') Route #{routeId}
+        
+        //- Displays the source and destination using the stopName array 
+        .row.justify-content-center(style='')
+            h5(style='font-weight: bold') 
+                span Current Direction: 
+                span(style='color: #EDAF00; text-transform: uppercase') &nbsp #{stopName[0]} 
+                span to 
+                span(style='color: #4285F4; text-transform: uppercase') #{stopName[stopName.length-1]}
+
+        //- Button to change direction of route (switches source and destination)
+        if routeId > 3 && routeId != 6 
+            //- Route 1,2,3 and 6 only have one direction
+            .row.justify-content-center(style='margin-bottom: 3em')
+                - var redirect = Math.abs(direct - 1)
+                a(href=''+ redirect +'')
+                    button.btn.btn-dark(type='button') 
+                        span(style='text-transform: uppercase') #{stopName[stopName.length-1]} 
+                        span to 
+                        span(style='text-transform: uppercase') #{stopName[0]}
+        //- Timetable
+        for sched in vertTime.schedule
+            - var serviceName = ''
+            if sched.directionId == direct && (sched.serviceId == 4 || sched.serviceId == 2) 
+                //- Calls table mixin to generate timetable for each schedule (weekday and weekend)
+                +table(sched)
+            
+    //- Change timetable design to horizontal view
+    .row.justify-content-center
+      a(href='/'+routeId+'/'+direct)
+        button.btn.btn-dark(type='button') Change Table Orientation
+    
+    //- Legend
+    .container.mb-3
+        p(style='font-weight: bold; font-size: .8em; padding: 0 !important; margin: 0 !important; color: red') You are here (DTC)
+        p(style='font-size: .8em; padding: 0 !important; margin: 0 !important') -- = No service
+        p(style='font-size: .8em; padding: 0 !important; margin: 0 !important') PM times are in bold
+        p(style='font-size: .8em; padding: 0 !important; margin: 0 !important') Order of stops go from top to bottom                    
